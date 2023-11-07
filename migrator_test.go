@@ -37,7 +37,7 @@ func TestMigrator(t *testing.T) {
 			WithDialect(testDBDriver),
 			WithFS(embedMigrations),
 			WithBasePath(testSQL),
-			SetEnvironments([]string{ // disable default
+			SetEnvironments([]string{ // disable base
 				"unittest",
 				"unittest2", // test merge
 			}))
@@ -59,7 +59,7 @@ func TestMigrator(t *testing.T) {
 				WithDialect(testDBDriver),
 				WithFS(embedMigrations),
 				WithBasePath(testSQL),
-				SetEnvironments([]string{ // disable default
+				SetEnvironments([]string{ // disable base
 					"unittest",
 					"unittest2", // test merge
 					"unittest3", // test rollback
@@ -85,7 +85,7 @@ func TestMigrator(t *testing.T) {
 			WithDialect(testDBDriver),
 			WithFS(embedMigrations),
 			WithBasePath(testSQL),
-			SetEnvironments([]string{ // disable default
+			SetEnvironments([]string{ // disable base
 				"unittest",
 				"unittest4", // test empty merge
 			}))

@@ -20,7 +20,7 @@ var gooseMx sync.Mutex
 
 // Migrator knows how to apply changes (migrations) to a versioned database schema.
 //
-// By default, the migrator will run migrations from the "default" environement folder.
+// By base, the migrator will run migrations from the "base" environment folder.
 // If extra environments are added using options, the migrator will merge
 // the migrations with the other folders corresponding to these environments.
 type Migrator struct {

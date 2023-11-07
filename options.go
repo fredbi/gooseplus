@@ -15,7 +15,7 @@ type (
 	// Default settings are:
 	// dialect: "postgres",
 	// base:    "sql",
-	// envs: []string{"default"},
+	// envs: []string{"base"},
 	// timeout: 5 * time.Minute,
 	// logger:  zap.NewExample(),
 	// fsys:    os.DirFS("."),
@@ -32,10 +32,10 @@ type (
 	}
 )
 
-var defaultOptions = options{
+var baseOptions = options{
 	dialect:          "postgres",
 	base:             "sql",
-	envs:             []string{"default"},
+	envs:             []string{"base"},
 	timeout:          5 * time.Minute,
 	migrationTimeout: 1 * time.Minute,
 	logger:           zap.NewExample(),
@@ -44,10 +44,10 @@ var defaultOptions = options{
 
 func applyOptionsWithDefaults(opts []Option) options {
 	if len(opts) == 0 {
-		return defaultOptions
+		return baseOptions
 	}
 
-	o := defaultOptions
+	o := baseOptions
 
 	for _, apply := range opts {
 		apply(&o)
@@ -115,7 +115,7 @@ func WithDialect(dialect string) Option {
 
 // WithEnvironments appends environment-specific folders to merge with the migrations.
 //
-// The default setting is a single folder "default".
+// The base setting is a single folder "base".
 func WithEnvironments(envs ...string) Option {
 	return func(o *options) {
 		o.envs = append(o.envs, envs...)
@@ -133,7 +133,7 @@ func SetEnvironments(envs []string) Option {
 
 // WithFS provides the file system where migrations are located.
 //
-// The default is os.Dir(".").
+// The base is os.Dir(".").
 func WithFS(fsys fs.FS) Option {
 	return func(o *options) {
 		o.fsys = fsys
@@ -144,5 +144,12 @@ func WithFS(fsys fs.FS) Option {
 func WithBasePath(base string) Option {
 	return func(o *options) {
 		o.base = base
+	}
+}
+
+// WithLogger provides a structured zap logger to the migrator.
+func WithLogger(zlg *zap.Logger) Option {
+	return func(o *options) {
+		o.logger = zlg
 	}
 }
