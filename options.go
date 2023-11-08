@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/pressly/goose/v3"
 	"go.uber.org/zap"
 )
 
@@ -25,6 +26,7 @@ type (
 		dialect          string
 		base             string
 		fsys             fs.FS
+		versionTable     string
 		logger           *zap.Logger
 		envs             []string
 		timeout          time.Duration
@@ -79,6 +81,15 @@ func (o options) withMigrationTimeout(ctx context.Context) (context.Context, fun
 	}
 
 	return context.WithTimeout(ctx, o.migrationTimeout)
+}
+
+func (o options) setVersionTable() {
+	if o.versionTable == "" {
+		return
+	}
+
+	// sets goose's global var
+	goose.SetTableName(o.versionTable)
 }
 
 // WithTimeout specifies a timeout to apply to the whole migration process.
@@ -151,5 +162,14 @@ func WithBasePath(base string) Option {
 func WithLogger(zlg *zap.Logger) Option {
 	return func(o *options) {
 		o.logger = zlg
+	}
+}
+
+// WithVersionTable tells goose to use an non-default version table.
+//
+// The default is "". Setting an empty table equates to using the default.
+func WithVersionTable(table string) Option {
+	return func(o *options) {
+		o.versionTable = table
 	}
 }

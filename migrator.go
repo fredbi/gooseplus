@@ -45,6 +45,7 @@ func (m Migrator) Migrate(parentCtx context.Context) error {
 	// global in goose: guard against race (but cannot be used concurrently with different settings)
 	gooseMx.Lock()
 	goose.SetBaseFS(m.fsys)
+	m.setVersionTable()
 
 	// leave any context with a deadline set unchanged. Otherwise, apply timeout from options.
 	ctx, cancel := m.withOptionalTimeout(parentCtx)
@@ -169,7 +170,12 @@ func (m Migrator) mergeMigrations() (goose.Migrations, error) {
 
 func (m Migrator) rollForwardFunc(db *sql.DB, migrations goose.Migrations) func(context.Context) error {
 	return func(ctx context.Context) error {
-		for {
+		var n int
+		defer func() {
+			m.logger.Info("completed", zap.Int("migrations", n))
+		}()
+
+		for ; ; n++ {
 			currentDBVersion, err := goose.GetDBVersion(db)
 			if err != nil {
 				return fmt.Errorf("could not determine the current schema version during rollforward: %w", err)
@@ -197,7 +203,12 @@ func (m Migrator) rollForwardFunc(db *sql.DB, migrations goose.Migrations) func(
 
 func (m Migrator) rollbackToFunc(db *sql.DB, migrations goose.Migrations) func(context.Context, int64) error {
 	return func(ctx context.Context, toVersion int64) error {
-		for {
+		var n int
+		defer func() {
+			m.logger.Info("rollbacked", zap.Int("migrations", n))
+		}()
+
+		for ; ; n++ {
 			currentDBVersion, err := goose.GetDBVersion(db)
 			if err != nil {
 				return fmt.Errorf("could not determine the current schema version during rollback: %w", err)

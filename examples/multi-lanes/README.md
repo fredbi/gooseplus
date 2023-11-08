@@ -2,7 +2,7 @@
 
 Proceed with 2 migration lanes: one processing fast running migrations, another one for long-running scripts.
 
-Use-case: usual migrations can proceed swiftly, so as to startup a deployed service quickly.
+Use-case: the usual migrations can proceed swiftly, so as to startup a deployed service quickly.
 
 However some data manipulations that we would like to keep under versioning may take some time
 (e.g. rebuild index, refresh materialized view, prepare bulk data initialization...).
@@ -10,8 +10,14 @@ However some data manipulations that we would like to keep under versioning may 
 Allowing for a special lane for those scripts allow to start the service as soon as the database state
 is workable for the app.
 
-This example illustrate how the completion of the long-running migrations can be signaled to the main app,
+This example illustrates how the completion of the long-running migrations can be signaled to the main app,
 for example to open some features that require that part.
+
+Caveat: since we maintain one single sequence of migrations, migrations created in the "slow lane" should
+relate to versions higher than the ones deployed in the "fast lane".
+
+As an alternative, we could switch the migrations run in the "slow lane" to their own versioning, using 
+option `WithVersionTable(...)`.
 
 ## Usage
 

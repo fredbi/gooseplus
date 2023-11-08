@@ -29,34 +29,26 @@ func main() {
 		log.Fatalln(e)
 	}
 
-	parentCtx := context.Background()
+	ctx := context.Background()
 
 	// start fast lane, then move on to regular processing
-	fastLaneCtx, cancel := context.WithTimeout(parentCtx, 2*time.Second)
-	if err := fastLaneMigration(fastLaneCtx, db); err != nil {
-		cancel()
-
+	if err := fastLaneMigration(ctx, db); err != nil {
 		log.Fatalln(err)
 	}
 
-	cancel()
-
-	grp, groupCtx := errgroup.WithContext(parentCtx)
-	slowLaneCtx, cancel := context.WithTimeout(groupCtx, 10*time.Minute)
-	defer cancel()
+	grp, groupCtx := errgroup.WithContext(ctx)
 
 	doneMigrating := make(chan struct{})
 
 	// start slow lane in the background, running additional migrations, signal to the main app when it is complete
 	grp.Go(func() error {
-		if err := slowLaneMigration(slowLaneCtx, db); err != nil {
+		if err := slowLaneMigration(groupCtx, db); err != nil {
 			return nil
 		}
 
 		// signals main that this is done
 		log.Printf("background migrations completed")
 		close(doneMigrating)
-		cancel()
 
 		return nil
 	})
@@ -66,7 +58,17 @@ func main() {
 		}
 	}()
 
-	// main app polls until the background job is completed
+	// Main app may poll until the background job is completed.
+	//
+	// Alternatively, the app can check at any time is the slow migrations are done by checking something like:
+	//
+	// func DoneWithMigration() bool {
+	//   select {
+	//    case <- doneMigrating:
+	//				return true
+	//		default:
+	//				return false
+	// }
 	ticker := time.NewTicker(time.Second)
 POLL:
 	for {
@@ -83,7 +85,10 @@ POLL:
 	log.Println("app exited gracefully")
 }
 
-func fastLaneMigration(ctx context.Context, db *sql.DB) error {
+func fastLaneMigration(parentCtx context.Context, db *sql.DB) error {
+	ctx, cancel := context.WithTimeout(parentCtx, 2*time.Second)
+	defer cancel()
+
 	migrator := gooseplus.New(
 		db,
 		gooseplus.WithDialect("sqlite3"),
@@ -94,13 +99,19 @@ func fastLaneMigration(ctx context.Context, db *sql.DB) error {
 	return migrator.Migrate(ctx)
 }
 
-func slowLaneMigration(ctx context.Context, db *sql.DB) error {
+func slowLaneMigration(parentCtx context.Context, db *sql.DB) error {
+	ctx, cancel := context.WithTimeout(parentCtx, 10*time.Minute)
+	defer cancel()
+
 	// NOTE: we can run migrations in parallel, but we can't use different goose options
 	// for parallel instances, such as WithFS() or WithDialect().
 	migrator := gooseplus.New(
 		db,
 		gooseplus.WithDialect("sqlite3"),
 		gooseplus.WithFS(embedMigrations),
+		// We can do that only sequentially (goose maintains a global state).
+		// With this option, long-running migrations are versioned separately.
+		gooseplus.WithVersionTable("goose_db_long_running"),
 		gooseplus.SetEnvironments([]string{"long-running"}),
 		gooseplus.WithMigrationTimeout(5*time.Minute),
 	)

@@ -22,10 +22,11 @@ jobs:
         check-latest: true
 
     - name: Tests
-      run: go test -v -race -cover -coverprofile=coverage.out -covermode=atomic ./...
+      run: go test -v -race -cover -coverprofile=coverage.out -covermode=atomic -coverpkg=. ./...
 
 
     - name: Update Coverage
       uses: shogo82148/actions-goveralls@v1
       with:
         path-to-profile: coverage.out
+        flag-name: Go-${{ matrix }}
