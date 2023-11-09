@@ -2,12 +2,16 @@
 
 Use programmatic migration scripts, rather than plain SQL.
 
-Use-case: populating data from a file, any complex logic difficult to achieve in plain SQL.
+Use-case: populating data from a file, applying any complex logic difficult to achieve in plain SQL.
 
 Avoids using procedural extensions such as PL/pgSQL (postgres).
 
-> Reminder: SQL migrations are plain SQL, not SQL scripts for frontends like `psql`. Those tools may
-> have some advanced capabilities (variables, file loading...) not available from plain SQL.
+> Reminder: SQL migrations are plain SQL _statements_, and not SQL scripts for frontends tools
+> like `psql`. Those tools may have some advanced capabilities (variables, file loading...) 
+> which are not available from plain SQL.
+
+In the following example, we run a data-initialization script that loads a plain CSV file into a table.
+
 ## Usage
 
 ```sh

@@ -20,7 +20,8 @@ var gooseMx sync.Mutex
 
 // Migrator knows how to apply changes (migrations) to a versioned database schema.
 //
-// By base, the migrator will run migrations from the "base" environment folder.
+// By default, the migrator will run migrations from the "base" environment folder.
+//
 // If extra environments are added using options, the migrator will merge
 // the migrations with the other folders corresponding to these environments.
 type Migrator struct {
@@ -36,29 +37,20 @@ func New(db *sql.DB, opts ...Option) *Migrator {
 	}
 }
 
-// Migrate applies database migrations, provided as either as SQL or go migration functions.
-//
-// Migrate applies the sequence of required migrations.
+// Migrate applies a sequence database migrations, provided either as SQL scripts or go migration functions.
 //
 // Whenever a migration fails, Migrate applies rollbacks back to the initial state before returning an error.
 func (m Migrator) Migrate(parentCtx context.Context) error {
-	// global in goose: guard against race (but cannot be used concurrently with different settings)
-	gooseMx.Lock()
-	goose.SetBaseFS(m.fsys)
-	m.setVersionTable()
+	lg := m.logger.With(zap.String("operation", "migratedb"))
+	if err := m.setGooseGlobals(lg); err != nil {
+		return err
+	}
 
 	// leave any context with a deadline set unchanged. Otherwise, apply timeout from options.
 	ctx, cancel := m.withOptionalTimeout(parentCtx)
 	defer cancel()
 
 	db := m.DB
-	lg := m.logger.With(zap.String("operation", "migratedb"))
-	goose.SetLogger(zap.NewStdLog(lg))
-	if err := goose.SetDialect(m.dialect); err != nil {
-		gooseMx.Unlock()
-		return err
-	}
-	gooseMx.Unlock()
 
 	lg.Info("applying db migrations")
 

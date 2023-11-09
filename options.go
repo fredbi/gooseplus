@@ -14,12 +14,14 @@ type (
 	// Option for the Migrator.
 	//
 	// Default settings are:
-	// dialect: "postgres",
-	// base:    "sql",
-	// envs: []string{"base"},
-	// timeout: 5 * time.Minute,
-	// logger:  zap.NewExample(),
-	// fsys:    os.DirFS("."),
+	//
+	//   dialect: "postgres",
+	//   base:    "sql",
+	//   envs: []string{"base"},
+	//   timeout: 5 * time.Minute,
+	//   migrationTimeout: 1 * time.Minute,
+	//   logger:  zap.NewExample(),
+	//   fsys:    os.DirFS("."),
 	Option func(*options)
 
 	options struct {
@@ -31,6 +33,7 @@ type (
 		envs             []string
 		timeout          time.Duration
 		migrationTimeout time.Duration
+		// gooseOptions     []goose.OptionsFunc
 	}
 )
 
@@ -83,6 +86,21 @@ func (o options) withMigrationTimeout(ctx context.Context) (context.Context, fun
 	return context.WithTimeout(ctx, o.migrationTimeout)
 }
 
+// setGooseGlobals sets global variables in goose: guard against race
+// (but cannot be used concurrently with different settings)
+func (o options) setGooseGlobals(lg *zap.Logger) error {
+	gooseMx.Lock()
+	defer gooseMx.Unlock()
+
+	goose.SetBaseFS(o.fsys)
+	o.setVersionTable()
+	goose.SetLogger(zap.NewStdLog(lg))
+
+	err := goose.SetDialect(o.dialect)
+
+	return err
+}
+
 func (o options) setVersionTable() {
 	if o.versionTable == "" {
 		return
@@ -117,7 +135,9 @@ func WithMigrationTimeout(timeout time.Duration) Option {
 	}
 }
 
-// WithDialect indicates the database SQL dialect (see goose ...)
+// WithDialect indicates the database SQL dialect.
+//
+// For details see https://pkg.go.dev/github.com/pressly/goose/v3#Dialect
 func WithDialect(dialect string) Option {
 	return func(o *options) {
 		o.dialect = dialect
@@ -126,7 +146,7 @@ func WithDialect(dialect string) Option {
 
 // WithEnvironments appends environment-specific folders to merge with the migrations.
 //
-// The base setting is a single folder "base".
+// The default setting is a single folder "base".
 func WithEnvironments(envs ...string) Option {
 	return func(o *options) {
 		o.envs = append(o.envs, envs...)
@@ -135,7 +155,7 @@ func WithEnvironments(envs ...string) Option {
 
 // SetEnvironments overrides environment-specific folders to merge with the migrations.
 //
-// Setting to nil or an empty slice will disable folders: migrations will be searched for in the base path only.
+// Setting to nil or to an empty slice will disable folders: migrations will be searched for in the base path only.
 func SetEnvironments(envs []string) Option {
 	return func(o *options) {
 		o.envs = envs
@@ -173,3 +193,13 @@ func WithVersionTable(table string) Option {
 		o.versionTable = table
 	}
 }
+
+/* not workable for now.
+
+// WithGooseOptions allows to inject other options available to `goose` users.
+func WithGooseOptions(gooseOptions ...goose.OptionsFunc) Option {
+	return func(o *options) {
+		o.gooseOptions = gooseOptions
+	}
+}
+*/

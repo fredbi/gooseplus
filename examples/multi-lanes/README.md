@@ -5,7 +5,7 @@ Proceed with 2 migration lanes: one processing fast running migrations, another 
 Use-case: the usual migrations can proceed swiftly, so as to startup a deployed service quickly.
 
 However some data manipulations that we would like to keep under versioning may take some time
-(e.g. rebuild index, refresh materialized view, prepare bulk data initialization...).
+(e.g. rebuilding an index, refreshing a materialized view, prepare bulk data initialization...).
 
 Allowing for a special lane for those scripts allow to start the service as soon as the database state
 is workable for the app.

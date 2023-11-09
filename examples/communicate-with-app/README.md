@@ -2,7 +2,7 @@
 
 Use programmatic migration scripts, passing parameters from the calling app using the context.
 
-Use-case: sharing logger, config and any other settings with the migration scripts.
+Use-case: sharing with the migration scripts a logger, config or any other settings from a top-level runner app.
 
 ## Usage
 

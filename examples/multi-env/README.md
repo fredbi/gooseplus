@@ -4,6 +4,8 @@ Migrations folders selected from environment variable `APP_ENV`.
 
 Use-case: populating data with different settings for test and production.
 
+In the following example, we populate some initial data with different values for the test and the production environment.
+
 ## Usage
 
 ```sh
