@@ -18,7 +18,8 @@ a few advanced use cases:
 
 1. Leaves a failed deployment in its initial state: upon failure, rollbacks migrations back to when the deployment started
 2. Support environment-specific migrations, so we can add migrations for tests, etc.
-3. More options: structured zap logger, fined-grained timeouts ...
+3. A global locking mechanism to run migrations once, even in a parallel deployment
+4. More options: structured zap logger, fined-grained timeouts ...
 
 `gooseplus` is primarily intended to be used as a library, and does not come with a CLI command.
 
@@ -39,6 +40,7 @@ Feel free to look at the various [`examples`](examples/README.md).
 * Everything `goose/v3` does out of the box.
 * Rollback to the state at the start of the call to `Migrate()` after a failure.
 * Environment-specific migration folders
+* Global lock table
 
 ## Concepts
 
@@ -100,6 +102,31 @@ You can use it with `gooseplus` like so:
 		gooseplus.WithFS(embedMigrations),
 	)
 ```
+
+### Global lock
+
+This is enabled with option `WithGlobalLock(true)`. It doesn't work with non-locking environments, such as `sqlite3`.
+It should work with `postgres` and `mysql`.
+
+An additional technical table, `goose_db_version_lock` is created to hold the outcome of the currently running migration.
+Note that if you change the name of the version table, the lock table is created as `{goose version table name}_lock`.
+
+Whenever a process or go routine starts the migration process, a single record in this table is created and locked
+until the migration completes.
+
+* any other competing migration process would wait until the lock is released
+* if the migration fails, it rolls back to the starting point before deployment. Other instances will resume from there and try again.
+
+Example: let's suppose that a deployment starts 3 instances of a service that starts by applying DB migrations.
+
+The first deployment acquires the lock, then runs the migrations.
+Other instances also attempt to run migrations, and wait on the lock.
+When the first deployment is done, the lock is released.
+The other deployments, one by one, acquire a lock, verify that the current version is up to date and release the lock.
+
+If the migration process of the first deployment failed at some point, the other ones attempt to run the sequence again.
+
+> *Attention point*: since migrations wait each other, make sure the global timeout can support this waiting.
 
 ### Logging
 

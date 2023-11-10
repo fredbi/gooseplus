@@ -33,6 +33,7 @@ type (
 		envs             []string
 		timeout          time.Duration
 		migrationTimeout time.Duration
+		withGlobalLock   bool
 		// gooseOptions     []goose.OptionsFunc
 	}
 )
@@ -191,6 +192,15 @@ func WithLogger(zlg *zap.Logger) Option {
 func WithVersionTable(table string) Option {
 	return func(o *options) {
 		o.versionTable = table
+	}
+}
+
+// WithGlobalLock prevent several migrations to run in parallel by applying a global lock.
+//
+// The default is false, meaning that deploying several instances in parallel won't work well.
+func WithGlobalLock(enabled bool) Option {
+	return func(o *options) {
+		o.withGlobalLock = enabled
 	}
 }
 
