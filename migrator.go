@@ -72,6 +72,28 @@ func (m Migrator) Migrate(parentCtx context.Context) error {
 		return nil
 	}
 
+	var tx *sql.Tx
+	defer func() {
+		if tx != nil {
+			_ = tx.Commit()
+		}
+	}()
+
+	if m.withGlobalLock {
+		if err = m.ensureLockTable(ctx); err != nil {
+			lg.Error("could not ensure the lock table exists", zap.Error(err))
+
+			return err
+		}
+
+		tx, err = m.acquireLock(ctx)
+		if err != nil {
+			lg.Error("lock could not be acquired prior to running migrations", zap.Error(err))
+
+			return err
+		}
+	}
+
 	rollForward := m.rollForwardFunc(db, mergedMigrations)
 	rollbackTo := m.rollbackToFunc(db, mergedMigrations)
 
