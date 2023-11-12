@@ -54,7 +54,7 @@ func (m Migrator) acquireLock(ctx context.Context) (*sql.Tx, error) {
 
 	row := tx.QueryRowContext(ctx,
 		fmt.Sprintf(
-			`SELECT MAX(status) FROM %s FOR UPDATE`, tableName,
+			`SELECT status FROM %s LIMIT 1 FOR UPDATE`, tableName,
 		),
 	)
 
