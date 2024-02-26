@@ -6,7 +6,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.19
 	github.com/pressly/goose/v3 v3.17.0
 	github.com/stretchr/testify v1.8.4
-	go.uber.org/zap v1.26.0
+	go.uber.org/zap v1.27.0
 	golang.org/x/sync v0.5.0
 )
 
